@@ -9,6 +9,9 @@ fun main(args: Array<String>) {
     val tokenAt=args.indexOf("--token")
     if(tokenAt>=0) repository.sessionToken=args.getOrNull(tokenAt+1)
     fun keywordArg(): String? = args.withIndex().firstOrNull { (index,value) -> !value.startsWith("--") && value.isNotBlank() && index!=tokenAt+1 }?.value
+    // 短信验证码登录实验（见 SmsLoginLab）：--sms-send <手机号> [--type 24]，收到码后 --sms-verify <验证码>。
+    if(args.contains("--sms-send")) return SmsLoginLab.send(args[args.indexOf("--sms-send")+1],args.getOrNull(args.indexOf("--type")+1)?.takeIf { "--type" in args } ?: "24")
+    if(args.contains("--sms-verify")) return SmsLoginLab.verify(args[args.indexOf("--sms-verify")+1])
     if(args.contains("--ranking")) {
         // 四个热播榜逐个验证：分页、名次、热度、更新时间；再验证首页四栏（并发取）与它们一致。
         try {

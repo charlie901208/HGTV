@@ -61,6 +61,8 @@ internal fun MainActivity.profileHead(row: LinearLayout) {
     gapInto(row,nameView,lp(-2,-2),TvStyle.GAP_INLINE)
     // 两个动作按钮：只有导入过参数才给（没登录时它们没有可操作的对象）。
     if(credentials==null) {
+        lateinit var phoneButton: TvButton
+        phoneButton=addButton(row,"手机号登录",size=ButtonSize.COMPACT) { startPhoneLogin(phoneButton) }
         lateinit var importButton: TvButton
         importButton=addButton(row,"导入账号参数",size=ButtonSize.COMPACT) {
             tvTools.accountImport(importButton,{ text -> importAccount(text,importButton) },{ pickAccountFile() })

@@ -74,17 +74,72 @@ internal fun MainActivity.importAccount(text: String,anchor: View?) {
         val result=runCatching { parseCredentials(text) }
         main.post {
             if(isDestroyed) return@post
-            result.onSuccess { credentials ->
-                library.saveAccount(credentials)
-                applyAccount()
-                showHint("账号参数已导入")
-                showCatalog()
-                loadAccount(force=true)
-            }.onFailure { failure ->
-                tvTools.info("导入失败",failure.message.orEmpty().take(200),anchor)
+            result.onSuccess { credentials -> adoptAccount(credentials,"账号参数已导入") }
+                .onFailure { failure -> tvTools.info("导入失败",failure.message.orEmpty().take(200),anchor) }
+        }
+    }
+}
+/** 校验通过的凭据：存到本机，刷新「我的」页与首页两栏。导入与手机号登录共用。 */
+internal fun MainActivity.adoptAccount(credentials: AccountCredentials,hint: String) {
+    library.saveAccount(credentials)
+    applyAccount()
+    showHint(hint)
+    showCatalog()
+    loadAccount(force=true)
+}
+/**
+ * 手机号登录：选地区 → 填号码发码 → 填验证码登录（协议见 [PhoneLogin]）。
+ *
+ * 每次发码都是一个新的 [PhoneLogin]（新注册一台设备），验证码只对最近一次发码有效。
+ * 发码或登录失败就回到同一步，并把平台给的原因显示在输入框下面。
+ * 每一步的平台原文打到 logcat（标签 `HGTV`），排查时用 `adb logcat -s HGTV` 看。
+ */
+internal fun MainActivity.startPhoneLogin(anchor: View?) {
+    tvTools.phoneRegion(anchor) { countryCode -> askPhoneNumber(anchor,countryCode,null) }
+}
+private fun MainActivity.askPhoneNumber(anchor: View?,countryCode: String?,error: String?) {
+    tvTools.phoneNumber(anchor,countryCode,error) { mobile ->
+        showHint("正在发送验证码…")
+        val login=PhoneLogin(repository.http)
+        io.submit {
+            val result=runCatching { login.send(mobile) }
+            logPhoneLogin(login)
+            main.post {
+                if(isDestroyed) return@post
+                result.onSuccess { sent -> askPhoneCode(anchor,login,sent.maskedMobile,null) }
+                    .onFailure { failure -> askPhoneNumber(anchor,countryCode,failure.message.orEmpty().take(200)) }
             }
         }
     }
+}
+private fun MainActivity.askPhoneCode(anchor: View?,login: PhoneLogin,sentTo: String,error: String?) {
+    tvTools.phoneCode(anchor,sentTo,error) { code ->
+        showHint("正在登录…")
+        io.submit {
+            val result=runCatching {
+                val credentials=login.verify(code)
+                // 与导入同一道关：平台对无效会话不报错，只降级成匿名设备（见 parseCredentials）。
+                repository.credentials=credentials
+                val profile=repository.accountProfile()
+                require(profile!=null && !profile.anonymous) { "平台下发了登录态，但没有认出账号。请按返回键重新发送验证码。" }
+                credentials
+            }
+            logPhoneLogin(login)
+            main.post {
+                if(isDestroyed) return@post
+                result.onSuccess { credentials -> adoptAccount(credentials,"手机号登录成功") }
+                    .onFailure { failure ->
+                        // 没登成就退回本机原来那份凭据（没有就是未登录）。
+                        repository.credentials=library.account().takeIf { it.configured }
+                        askPhoneCode(anchor,login,sentTo,failure.message.orEmpty().take(200))
+                    }
+            }
+        }
+    }
+}
+private fun logPhoneLogin(login: PhoneLogin) {
+    login.trace.forEach { android.util.Log.i("HGTV","phone-login $it") }
+    login.trace.clear()
 }
 /**
  * 把手机上送来的文本解析成凭据：`cookieStore.xml` 走 XML 解析，其余按 `key=value` 串处理。

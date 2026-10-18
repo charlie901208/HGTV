@@ -16,6 +16,7 @@ import com.google.zxing.qrcode.QRCodeWriter
 import com.hgtv.star.core.AccountCredentialsParser
 import com.hgtv.star.core.AccountImportServer
 import com.hgtv.star.core.PhoneSearchServer
+import com.hgtv.star.core.PhoneLogin
 import com.hgtv.star.core.LibraryTransferServer
 import com.hgtv.star.core.BackupData
 import java.net.Inet4Address
@@ -297,6 +298,58 @@ class TvTools(private val activity: Activity) {
         // 焦点交给 [TvDialog] 自己的规则：**第一枚按钮**（也就是「取消」）。
         // 不主动把焦点塞进输入框——那样一打开弹窗就在输入框里闪光标，
         // 用户按左右键还会被输入框吃掉，想按「取消」得先往下走。
+        open(next,anchor)
+    }
+    /**
+     * 手机号登录第一步：选地区。常用的四个直接给按钮（[onPick] 收到区号），
+     * 其余地区选「其他地区」（收到 null），下一步自己填「+区号 号码」。
+     */
+    fun phoneRegion(anchor: View?,onPick: (String?)->Unit) {
+        val pick=TvDialog(activity,"手机号登录")
+        pick.message("选择手机号所属地区，验证码会以短信发送。\n支持境外号码；不在列表里的地区选「其他地区」。")
+        pick.button("+86 大陆") { onPick("86") }
+        pick.button("+886 台湾") { onPick("886") }
+        pick.button("+852 香港") { onPick("852") }
+        pick.button("其他地区") { onPick(null) }
+        open(pick,anchor)
+    }
+    /** 填手机号。[countryCode] 为 null 时整串填「+区号 号码」；[error] 是上一次发码失败的原因。 */
+    fun phoneNumber(anchor: View?,countryCode: String?,error: String?,onSubmit: (String)->Unit) {
+        val prompt=if(countryCode==null) "填「+区号 号码」，区号与号码之间留一个空格，例如 +853 61234567。"
+            else "地区 +$countryCode。填手机号，开头的 0 可留可省。"
+        entry(anchor,"输入手机号",prompt,if(countryCode==null) "+区号 号码" else "手机号码",
+            android.text.InputType.TYPE_CLASS_PHONE,"发送验证码",error,
+            { raw -> runCatching { if(countryCode==null) PhoneLogin.parse(raw) else PhoneLogin.format(countryCode,raw) } },onSubmit)
+    }
+    /** 填验证码。[error] 是上一次登录失败的原因。 */
+    fun phoneCode(anchor: View?,sentTo: String,error: String?,onSubmit: (String)->Unit) {
+        entry(anchor,"输入验证码","验证码已发到 $sentTo，收到短信后填入。\n要换号码或重发，按返回键从头开始。","短信验证码",
+            android.text.InputType.TYPE_CLASS_NUMBER,"登录",error,
+            { raw -> raw.filter(Char::isDigit).let { code -> if(code.length in 4..8) Result.success(code) else Result.failure(IllegalArgumentException("验证码是 4~8 位数字")) } },onSubmit)
+    }
+    /**
+     * 单行输入弹窗（与「输入 sessionid」同一套外观与焦点链）。
+     * [validate] 失败就把原因标在输入框上、弹窗不关；成功先关窗再交给 [onSubmit]（它可能接着开下一个弹窗）。
+     */
+    private fun entry(anchor: View?,title: String,prompt: String,hint: String,type: Int,action: String,error: String?,
+                      validate: (String)->Result<String>,onSubmit: (String)->Unit) {
+        val next=TvDialog(activity,title)
+        next.message(prompt)
+        val input=sessionIdField().apply { this.hint=hint; inputType=type }
+        next.content.addView(input,LinearLayout.LayoutParams(-1,dp(SESSION_FIELD_HEIGHT+2*TvStyle.SOFT_BAND))
+            .apply { topMargin=dp(TvStyle.GAP_BLOCK) })
+        error?.let {
+            next.content.addView(label("上次失败：$it",13f),LinearLayout.LayoutParams(-1,-2).apply { topMargin=dp(TvStyle.GAP_TIGHT) })
+        }
+        val cancel=next.button("取消") {}
+        val submit=next.button(action,keepOpen=true) {
+            validate(input.text.toString())
+                .onSuccess { value -> next.dismiss(); onSubmit(value) }
+                .onFailure { input.error=it.message }
+        }
+        input.nextFocusDownId=submit.id
+        cancel.nextFocusUpId=input.id
+        submit.nextFocusUpId=input.id
         open(next,anchor)
     }
     /** 手填 sessionid 的输入框：外观与搜索页那一条一致（凹陷槽 + 胶囊圆角 + 焦点加深）。 */
