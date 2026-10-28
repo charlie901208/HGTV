@@ -29,7 +29,7 @@ class AppUpdatesTest {
         val update = AppUpdate.parse(payload(bytes))
         assertEquals(30L, update.versionCode)
         assertEquals("HGTV_1.0.1.apk", update.fileName)
-        assertEquals("https://github.com/pan8664716/HGTV/releases/download/v1.0.1/HGTV_1.0.1.apk", update.downloadUrl)
+        assertEquals("https://github.com/charlie901208/HGTV/releases/download/v1.0.1/HGTV_1.0.1.apk", update.downloadUrl)
         assertTrue(update.newerThan(24, 26))
         assertFalse("同版本不算更新", update.newerThan(30, 26))
         assertFalse("更高 minSdk 不算可用更新", update.newerThan(24, 25))

@@ -62,7 +62,7 @@
 
 ## 下载
 
-从 [Releases](https://github.com/pan8664716/HGTV/releases/latest) 下载最新正式 APK，拷到电视安装，或用 ADB 覆盖安装：
+从 [Releases](https://github.com/charlie901208/HGTV/releases/latest) 下载最新正式 APK，拷到电视安装，或用 ADB 覆盖安装：
 
 ```sh
 adb install -r HGTV_1.1.2.apk    # 文件名：<标识>_<版本号>.apk
@@ -70,7 +70,7 @@ adb install -r HGTV_1.1.2.apk    # 文件名：<标识>_<版本号>.apk
 
 进入应用时若发现新版本会弹窗询问，设置 → 版本与更新里也可手动检查并覆盖安装；本机收藏、进度与设置保留。
 连不上 GitHub 时更新自动走镜像；手动下载也可用
-[镜像地址](https://gh-proxy.org/https://github.com/pan8664716/HGTV/releases/latest)。
+[镜像地址](https://gh-proxy.org/https://github.com/charlie901208/HGTV/releases/latest)。
 低于 1.1.2 的旧版无法在应用内升级，用上面的地址手动装一次即可，之后继续自动更新。
 
 应用与红果官方无关联，内容接口为非官方实现，平台变化可能导致失效；

@@ -31,7 +31,7 @@ data class AppUpdate(
     val downloadUrl get() = "$RELEASES/download/$tag/$fileName"
 
     companion object {
-        const val REPOSITORY = "pan8664716/HGTV"
+        const val REPOSITORY = "charlie901208/HGTV"
         const val PACKAGE = "com.hgtv.star"
         const val RELEASES = "https://github.com/$REPOSITORY/releases"
         /** 元数据地址：Release 的 latest 附件，改仓库只改 [REPOSITORY]。 */
