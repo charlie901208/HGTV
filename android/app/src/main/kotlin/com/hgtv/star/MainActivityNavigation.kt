@@ -68,6 +68,8 @@ internal fun MainActivity.switchTab(next: Int) {
         }
         focusFirstCardOnLanding=false
     } else if(needsLoad) focusFirstCardOnLanding=true
+    // 「我的」页的四栏是账号数据：每次进来都重取一次，别的设备（手机）上刚看过的才会出现。
+    if(next==TAB_PROFILE) loadAccount(force=true)
     showCatalog(load=needsLoad)
 }
 /**
@@ -150,7 +152,10 @@ internal fun MainActivity.selectCategory(path: String) {
 }
 /** 本机记录集合页（收藏 / 历史 / 稍后观看）；远端列表只有榜单页一种，不再有「热门集合页」。 */
 internal fun MainActivity.showCollection(kind: String) {
-    collection=kind; page=1; catalogFocus=""; showCatalog()
+    collection=kind; page=1; catalogFocus=""
+    // 历史页带账号那一半：进来就重取，不然要重开 App 才看得到别的设备上的新记录。
+    if(kind=="history") loadAccount(force=true)
+    showCatalog()
 }
 /** 集合页标题（本机记录页专用）。 */
 internal fun MainActivity.collectionName(kind: String)=when(kind) {

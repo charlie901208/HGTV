@@ -477,7 +477,7 @@ internal fun MainActivity.bindGridCard(card: PosterCard,item: Series) {
  * 不捕获某一次的 item。
  */
 internal fun MainActivity.wireGridCard(card: PosterCard) {
-    card.setOnClickListener { card.series?.let { item -> openSeries(item,collection=="history") } }
+    card.setOnClickListener { card.series?.let { item -> openSeries(item,collection=="history" || (tab==TAB_PROFILE && accountTab=="history")) } }
     card.setOnLongClickListener { card.series?.let { item -> seriesMenu(item,card) }; true }
     card.setOnKeyListener { _,key,event ->
         val item=card.series

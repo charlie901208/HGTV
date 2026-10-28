@@ -46,11 +46,25 @@ internal fun MainActivity.openDetail(series: Series,resume: Boolean=false,autopl
         detail=result; library.observeFavorite(series.id,result.episodes.size,System.currentTimeMillis(),acknowledge=true)
         // 内容已经在屏幕上（下面这一句就渲染），相关剧集丢后台去查：用户点开时多半已经就绪。
         prefetchRelated(series.id)
-        val progress=library.progress(series.id)
-        val target=ResumePlayback.target(result.episodes,progress?.episodeId,progress?.position ?: 0,progress?.completed==true)
+        val target=resumeTarget(series.id,result.episodes)
         episodeIndex=target.index
         if(resume) playEpisode(target.index,target.position,autoplay=detailAutoplay) else showDetail(false)
     }, { problem -> error(body,problem) { openDetail(series,resume,detailAutoplay) } })
+}
+/**
+ * 上次看到哪一集：本机进度与账号历史（手机上看的）取较新的一条。
+ *
+ * 两边是同一集时用本机那条（带播放位置）；账号历史只有集数，从该集开头播。
+ */
+internal fun MainActivity.resumeTarget(id: String,episodes: List<String>): ResumeTarget {
+    val local=library.progress(id)
+    val localTarget=ResumePlayback.target(episodes,local?.episodeId,local?.position ?: 0,local?.completed==true)
+    val remote=accountData?.history?.firstOrNull { it.series.id==id } ?: return localTarget
+    val remoteIndex=episodes.indexOf(remote.episodeId).takeIf { it>=0 } ?: remote.episodeIndex.coerceIn(0,episodes.lastIndex)
+    // ponytail: 平台的 last_watch_time 可能是秒，小于 1e12 的按秒换成毫秒再比。
+    val remoteAt=remote.updatedAt.let { if(it in 1 until 1_000_000_000_000) it*1000 else it }
+    val localIndex=local?.let { episodes.indexOf(it.episodeId) } ?: -1
+    return if(local==null || (remoteAt>local.updatedAt && remoteIndex!=localIndex)) ResumeTarget(remoteIndex,0) else localTarget
 }
 /**
  * 详情页。
@@ -181,7 +195,7 @@ internal fun MainActivity.showDetail(focusEpisode: Boolean, focusTarget: View?=n
     // 用户要求统一成一个词）。续播目标仍然照算——`ResumePlayback.target` 处理了
     // 「上一集看完 → 从下一集开头」「看到一半 → 回到那一集的那个位置」两种情况，
     // 文案与动作因此仍然同源，只是不再把集数写在按钮上。
-    val target=ResumePlayback.target(data.episodes,progress?.episodeId,progress?.position ?: 0,progress?.completed==true)
+    val target=resumeTarget(data.series.id,data.episodes)
     // 这一行的三个按钮同档同高（56dp），不再出现「主按钮 56、旁边两个 48」的高低差；
     // 强调色仍然只给主操作，尺寸与语义分开管。
     // 播放按钮不再用 PRIMARY（常亮的亮面板）：简介页这一行是四个平级入口，
