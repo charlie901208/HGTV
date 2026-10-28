@@ -684,6 +684,26 @@ class MainActivity: Activity() {
     internal val restoreBuffering=Runnable { restoreBufferingUi() }
     internal val retireForced=Runnable { retirePreviousEpisode() }
 
+    /**
+     * 每 2 天清一次 cacheDir（封面缩略图等），后台线程删，不拖慢启动。
+     * 收藏、进度、登录都在 SharedPreferences 里，不受影响；`updates/` 可能正在下载新版，跳过。
+     */
+    private fun cleanCachePeriodically() {
+        val prefs=getSharedPreferences("cache-cleanup",MODE_PRIVATE)
+        val now=System.currentTimeMillis()
+        if(now-prefs.getLong("last",0) in 0 until 2*24*60*60*1000L) return
+        prefs.edit().putLong("last",now).apply()
+        clearCache()
+    }
+    /** 后台删 cacheDir（跳过 `updates/`），删完在主线程回调；设置页「清除缓存」也走这里。 */
+    internal fun clearCache(done: () -> Unit = {}) {
+        Thread {
+            cacheDir.listFiles().orEmpty().filter { it.name!="updates" }.forEach { it.deleteRecursively() }
+            android.util.Log.i("HGTV","cache cleaned")
+            main.post { if(!isDestroyed) done() }
+        }.start()
+    }
+
     // ---- 生命周期与系统回调：扩展成员不能 override，只能留在 Activity 本体里 ----
     override fun onCreate(state: Bundle?) {
         super.onCreate(state)
@@ -695,6 +715,7 @@ class MainActivity: Activity() {
         // 低内存设备保留全部视觉层级，只关掉过渡动画、收紧柔光（投影更短更淡，生成也更快）。
         TvStyle.animate=getSystemService(android.app.ActivityManager::class.java)?.isLowRamDevice!=true
         Soft.quality=if(TvStyle.animate) 1f else .7f
+        cleanCachePeriodically()
         library=Library(this); artwork=ArtworkLoader(this); tvTools=TvTools(this)
         root=FrameLayout(this).apply { setBackgroundColor(bg); clipChildren=false; clipToPadding=false }
         setContentView(root)

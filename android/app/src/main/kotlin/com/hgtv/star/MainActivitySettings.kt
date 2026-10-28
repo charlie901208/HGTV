@@ -131,6 +131,8 @@ internal fun MainActivity.settings(parent: LinearLayout) {
     hidden=setting(device,"恢复隐藏的剧集  ·  ${library.hidden().size} 部") {
         library.unhideAll(); hidden.text="恢复隐藏的剧集  ·  0 部"
     }
+    // 手动清除缓存（封面缩略图等）：收藏、进度、登录不受影响。启动时每 2 天也会自动清一次。
+    setting(device,"清除缓存") { clearCache { showHint("缓存已清除") } }
     // 「版本与更新」：打开更新弹窗，可以手动检查、下载并交给系统安装。
     // 有新版本时进入应用会主动提示一次；选过「暂不更新」后不再主动提示，
     // 直到装上任何新版本（见 AppUpdater.declined）。
