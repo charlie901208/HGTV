@@ -121,11 +121,29 @@ README.md NOTICE.md LICENSE
 需要 JDK 17、Android SDK Platform 36 / Build Tools 36.0.0；Gradle 8.14.3 包装器已随仓库提供。
 设置 `ANDROID_HOME`，或在 `android/local.properties` 写入 `sdk.dir=<SDK 绝对路径>`。
 
+### 改版本号
+
+版本号与版本 code 写在 `android/app/build.gradle.kts`，用脚本改，不要手改（macOS / Linux / Windows Git Bash 通用）：
+
+```sh
+tools/bump-version.sh 1.1.6        # 版本号改成 1.1.6，版本 code 自动 +1
+tools/bump-version.sh 1.1.6 40     # 两个都指定
+tools/version.sh version           # 查看当前版本号（code 用 tools/version.sh code）
+```
+
+两者必须**同时变大**：已安装的版本 code 更高时无法覆盖安装，发布工作流也不会发版。
+
+### 输出 APK
+
 ```sh
 # 开发包：直接可安装，无需发布私钥
 ./android/gradlew -p android :core:test :app:lintDebug :app:assembleDebug
 adb install -r android/app/build/outputs/apk/debug/app-debug.apk
 ```
+
+Windows PowerShell 在 `android` 目录下执行 `.\gradlew.bat :app:assembleDebug`。
+产物在 `android/app/build/outputs/apk/debug/app-debug.apk`。
+开发包与正式包签名不同，电视上装着正式包时要先卸载（会清除本机收藏与进度）。
 
 静态校验与离线校对图（校对图输出到 `docs/preview/.local/`，不入库）：
 

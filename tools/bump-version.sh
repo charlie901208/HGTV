@@ -22,8 +22,12 @@ else
   new_code=$((current_code + 1))
 fi
 
-sed -i '' "s/versionCode = System.getenv(\"HGTV_VERSION_CODE\")?\.toInt() ?: [0-9]*/versionCode = System.getenv(\"HGTV_VERSION_CODE\")?.toInt() ?: $new_code/" "$gradle_file"
-sed -i '' "s/versionName = System.getenv(\"HGTV_VERSION_NAME\") ?: \"[^\"]*\"/versionName = System.getenv(\"HGTV_VERSION_NAME\") ?: \"$new_name\"/" "$gradle_file"
+# -i.bak 再删备份：macOS（BSD sed）与 Windows Git Bash / Linux（GNU sed）都认这种写法；`-i ''` 只有 BSD 认。
+sed -i.bak \
+  -e "s/versionCode = System.getenv(\"HGTV_VERSION_CODE\")?\.toInt() ?: [0-9]*/versionCode = System.getenv(\"HGTV_VERSION_CODE\")?.toInt() ?: $new_code/" \
+  -e "s/versionName = System.getenv(\"HGTV_VERSION_NAME\") ?: \"[^\"]*\"/versionName = System.getenv(\"HGTV_VERSION_NAME\") ?: \"$new_name\"/" \
+  "$gradle_file"
+rm -f "$gradle_file.bak"
 
 echo "versionName $("$repo_dir/tools/version.sh" version) / versionCode $("$repo_dir/tools/version.sh" code)"
 echo "产物名：$("$repo_dir/tools/version.sh" apk)"
