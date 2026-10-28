@@ -132,7 +132,7 @@ internal fun MainActivity.settings(parent: LinearLayout) {
         library.unhideAll(); hidden.text="恢复隐藏的剧集  ·  0 部"
     }
     // 手动清除缓存（封面缩略图等）：收藏、进度、登录不受影响。启动时每 2 天也会自动清一次。
-    setting(device,"清除缓存") { clearCache { showHint("缓存已清除") } }
+    val clearCacheRow=setting(device,"清除缓存") { clearCache { showHint("缓存已清除") } }
     // 「版本与更新」：打开更新弹窗，可以手动检查、下载并交给系统安装。
     // 有新版本时进入应用会主动提示一次；选过「暂不更新」后不再主动提示，
     // 直到装上任何新版本（见 AppUpdater.declined）。
@@ -338,7 +338,7 @@ internal fun MainActivity.settings(parent: LinearLayout) {
     // 不占位，链必须先在再按档位改，否则在弹窗里切回可见档之后这几行还是选不中
     //（早先按档位裁剪列内容的写法就栽在这里）。
     val playbackItems=listOf<View>(qualityButton,defaultSpeed,frame,autoNextButton)
-    val deviceItems=listOf<View>(backup,hidden,versionRow,license)
+    val deviceItems=listOf<View>(backup,hidden,clearCacheRow,versionRow,license)
     val columns=listOf(playbackItems,deviceItems)
     columns.forEachIndexed { column,items -> items.forEachIndexed { index,view ->
         view.nextFocusUpId=items.getOrNull(index-1)?.id ?: (navEntry()?.id ?: View.NO_ID)
