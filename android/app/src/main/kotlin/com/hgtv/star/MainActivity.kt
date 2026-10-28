@@ -129,6 +129,8 @@ class MainActivity: Activity() {
     internal var initialCatalogPending=true
     internal var restoreStoppedPage=false
     internal var pendingDetail: Series?=null
+    /** 打开剧集时即时查到的云端进度（见 [openDetail]），比 accountData 里那份新。 */
+    internal var resumeCloud: AccountHistory?=null
     internal var detailAutoplay=true
     internal var libraryLoadError: Throwable?=null
     internal var workScope: RequestScope?=null

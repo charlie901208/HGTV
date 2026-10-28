@@ -741,6 +741,13 @@ class ContentRepository(val http: OkHttpClient = OkHttpClient.Builder().connectT
         return rows.mapNotNull { row -> details[row.series.id]?.let { row.copy(series=it) } }
     }
 
+    /** 只查一部剧的云端进度（不补片名封面）：打开剧集时用，别的设备刚看过的也能接上。未登录返回 null。 */
+    fun accountProgress(seriesId: String): AccountHistory? {
+        if(!signedIn) return null
+        return AccountParser.history(accountJson("/reading/bookapi/read_progress/list/v1/",
+            mapOf("book_types" to "2","limit" to MULTI_DETAIL_LIMIT.toString()))).firstOrNull { it.series.id==seriesId }
+    }
+
     /**
      * 点赞：`ugc/action/mget` 的「我的点赞记录」。
      *

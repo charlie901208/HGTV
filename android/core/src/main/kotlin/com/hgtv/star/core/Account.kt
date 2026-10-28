@@ -45,7 +45,9 @@ data class AccountHistory(
     val episodeId: String,
     val updatedAt: Long,
     /** 这部剧一共多少集；未知时为 0。 */
-    val episodes: Int = 0
+    val episodes: Int = 0,
+    /** 这一集看到的位置（毫秒，平台的 `current_play_time`）；未知时为 0。 */
+    val position: Long = 0
 )
 
 /** 「点赞」里的一项（`/reading/ugc/action/mget/v1/` 的 `action_type=3` 记录）。 */
@@ -419,7 +421,7 @@ object AccountParser {
             if (!id.matches(Regex("[0-9]{1,30}"))) return@mapNotNull null
             val index = (row.optInt("vid_index") - 1).coerceAtLeast(0)
             AccountHistory(Series(id, "", "", "", "", ""), index, row.str("vid"),
-                row.optLong("last_watch_time"), row.optInt("episode_count"))
+                row.optLong("last_watch_time"), row.optInt("episode_count"), row.optLong("current_play_time"))
         }.distinctBy { it.series.id }.sortedByDescending { it.updatedAt }
     }
 

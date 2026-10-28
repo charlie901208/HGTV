@@ -42,7 +42,12 @@ internal fun MainActivity.openDetail(series: Series,resume: Boolean=false,autopl
     relatedWorks=null; relatedLoading=false; relatedFailed=false; relatedFor=""
     relatedToken.incrementAndGet(); relatedJob?.cancel(true); relatedJob=null
     val body=base(series.title); message(body,"正在加载剧集…")
-    work({ repository.detail(series.id) }, { result ->
+    work({
+        // 云端进度与详情并行查：账号历史可能是几小时前拉的，手机上刚看的要即时问一次。查不到不影响打开。
+        val cloud=java.util.concurrent.CompletableFuture.supplyAsync { runCatching { repository.accountProgress(series.id) }.getOrNull() }
+        repository.detail(series.id) to runCatching { cloud.get(5,java.util.concurrent.TimeUnit.SECONDS) }.getOrNull()
+    }, { (result,cloud) ->
+        resumeCloud=cloud
         detail=result; library.observeFavorite(series.id,result.episodes.size,System.currentTimeMillis(),acknowledge=true)
         // 内容已经在屏幕上（下面这一句就渲染），相关剧集丢后台去查：用户点开时多半已经就绪。
         prefetchRelated(series.id)
@@ -57,14 +62,26 @@ internal fun MainActivity.openDetail(series: Series,resume: Boolean=false,autopl
  * 两边是同一集时用本机那条（带播放位置）；账号历史只有集数，从该集开头播。
  */
 internal fun MainActivity.resumeTarget(id: String,episodes: List<String>): ResumeTarget {
+    val last=episodes.lastIndex
     val local=library.progress(id)
-    val localTarget=ResumePlayback.target(episodes,local?.episodeId,local?.position ?: 0,local?.completed==true)
-    val remote=accountData?.history?.firstOrNull { it.series.id==id } ?: return localTarget
-    val remoteIndex=episodes.indexOf(remote.episodeId).takeIf { it>=0 } ?: remote.episodeIndex.coerceIn(0,episodes.lastIndex)
-    // ponytail: 平台的 last_watch_time 可能是秒，小于 1e12 的按秒换成毫秒再比。
-    val remoteAt=remote.updatedAt.let { if(it in 1 until 1_000_000_000_000) it*1000 else it }
-    val localIndex=local?.let { episodes.indexOf(it.episodeId) } ?: -1
-    return if(local==null || (remoteAt>local.updatedAt && remoteIndex!=localIndex)) ResumeTarget(remoteIndex,0) else localTarget
+    // 集 id 对不上（平台换过 id）时退回存下来的集号，不再从第一集开始。
+    val localIndex=local?.let { p -> episodes.indexOf(p.episodeId).takeIf { it>=0 } ?: p.episodeIndex.coerceIn(0,last) }
+    val localTarget=when {
+        local==null || localIndex==null -> ResumeTarget(0,0)
+        local.completed -> ResumeTarget((localIndex+1).coerceAtMost(last),0)
+        else -> ResumeTarget(localIndex,local.position.coerceAtLeast(0))
+    }
+    val remote=resumeCloud?.takeIf { it.series.id==id } ?: accountData?.history?.firstOrNull { it.series.id==id }
+    val target=if(remote==null) localTarget else {
+        val remoteIndex=episodes.indexOf(remote.episodeId).takeIf { it>=0 } ?: remote.episodeIndex.coerceIn(0,last)
+        // ponytail: 平台的 last_watch_time 可能是秒，小于 1e12 的按秒换成毫秒再比。
+        val remoteAt=remote.updatedAt.let { if(it in 1 until 1_000_000_000_000) it*1000 else it }
+        // 云端没给时间时，谁看得更后面用谁。
+        val newer=local==null || remoteAt>local.updatedAt || (remoteAt<=0 && remoteIndex>localTarget.index)
+        if(newer && remoteIndex!=localIndex) ResumeTarget(remoteIndex,remote.position.coerceAtLeast(0)) else localTarget
+    }
+    android.util.Log.i("HGTV","resume series=$id local=${local?.episodeIndex}@${local?.updatedAt} cloud=${remote?.episodeIndex}@${remote?.updatedAt} -> episode=${target.index+1} pos=${target.position}")
+    return target
 }
 /**
  * 详情页。

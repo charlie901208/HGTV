@@ -95,7 +95,7 @@ internal fun MainActivity.applyAccountFavorite(series: Series,added: Boolean) {
 /** 本机改动就地写回账号侧缓存：观看进度新增 / 更新（同一部剧只留最新一条，排在最前）。 */
 internal fun MainActivity.applyAccountHistory(progress: WatchProgress,episodeCount: Int) {
     val data=accountData ?: return
-    val row=AccountHistory(progress.series,progress.episodeIndex,progress.episodeId,progress.updatedAt,episodeCount)
+    val row=AccountHistory(progress.series,progress.episodeIndex,progress.episodeId,progress.updatedAt,episodeCount,progress.position)
     accountData=data.copy(history=listOf(row)+data.history.filterNot { it.series.id==progress.series.id })
     refreshAccountListIfVisible()
 }

@@ -106,7 +106,7 @@ internal fun MainActivity.historyRows(local: List<WatchProgress>): List<HomeScre
         if(p.duration>0) "${formatTime(p.position)} / ${formatTime(p.duration)}" else "第 ${p.episodeIndex+1} 集") }.toMutableList()
     val seen=rows.map { it.series.id }.toSet()
     accountData?.history?.filterNot { it.series.id in seen }?.take(10-rows.size)?.forEach { row ->
-        rows+=HomeScreen.Entry(row.series,"账号 · 看到第 ${row.episodeIndex+1} 集")
+        rows+=HomeScreen.Entry(row.series,"账号 · 看到第 ${row.episodeIndex+1} 集",resume=true)
     }
     return rows
 }
